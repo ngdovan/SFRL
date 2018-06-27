@@ -6,6 +6,8 @@ import threading
 import pygame
 import time as time_pg
 
+import tensorflow as tf
+
 EPISODES = 5000
 
 visual = True
@@ -30,13 +32,17 @@ def play(agent, init_state, results, e, time):
 
     action = agent.act(state)
     MY_LOCK.acquire()
-    next_state, reward, done, total_reward = env.step(action, agent)
+    next_state, reward, done, _ = env.step(action, agent)
     MY_LOCK.release()
     if curr_reward[agent.Id] == 0:
         curr_reward[agent.Id] = reward
     backup = reward
     reward = reward - curr_reward[agent.Id]
     curr_reward[agent.Id] = backup
+
+    if e == 0:
+        total_rewards[agent.Id] = 0
+
     total_rewards[agent.Id] += reward
     next_state = np.reshape(next_state, [1, state_size])
     # if visual:
@@ -63,9 +69,24 @@ def play(agent, init_state, results, e, time):
             agent.update_target_model()
         results[agent.Id] = next_state, False
 
+def _record_reward(sess, summary_writer, summary_op, feeds, episode):
+    return
+    summary_str = sess.run(summary_op, feed_dict=feeds)
+    summary_writer.add_summary(summary_str, episode)
+    summary_writer.flush()
+        
 
 if __name__ == "__main__":
+    # summary for tensorboard
+    input_placeholders = dict()
+    summaries = []
+    sess = tf.Session()
+
     for i in range(num_agents):
+        # reward_input = tf.placeholder(tf.int32)
+        input_placeholders[i] = tf.placeholder('float')
+        summaries.append(tf.summary.scalar("agent_{}_reward".format(i + 1), input_placeholders[i]))
+
         if i == 0:
             ran = True
         else:
@@ -75,7 +96,12 @@ if __name__ == "__main__":
         agents.append(a)
         curr_reward[i] = 0
         total_rewards[i] = 0
+
+    summary_op = tf.summary.merge(summaries)
+    summary_writer = tf.summary.FileWriter('logs')
+
     pygame.event.pump()
+
     for e in range(EPISODES):
         print('Episode {}/{}'.format(e + 1, EPISODES))
         states = env.reset(num_agents=num_agents, num_targets=0)
@@ -104,8 +130,13 @@ if __name__ == "__main__":
             if len(done_agents) == len(agents):
                 print('all done')
                 break
+        feed_dict = dict()
         for agent in agents:
+            feed_dict[input_placeholders[agent.Id]] = total_rewards[agent.Id]
+
             if len(agent.memory) > batch_size:
                 agent.replay(batch_size)
             if e % 10 == 0:
                 agent.save("training/save/gw-ddqn-multiple-agents-{}.h5".format(agent.Id))
+        
+        _record_reward(sess, summary_writer, summary_op, feed_dict, e)

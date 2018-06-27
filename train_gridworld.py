@@ -12,7 +12,7 @@ if __name__ == "__main__":
     state_size = env.observation_space_shape
     action_size = len(env.action_space)
     agent = DQNAgent(state_size, action_size)
-    agent.load("training/save/gw-ddqn.h5")
+    # agent.load("training/save/gw-ddqn.h5")
     done = False
     batch_size = 32
     max_step = 500
@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
         for time in range(max_step):
             action = agent.act(state)
-            next_state, reward, done, total_reward = env.step(agent, action)
+            next_state, reward, done, total_reward = env.step(action, agent)
             next_state = np.reshape(next_state, [1, state_size])
             if visual:
                 cv2.imshow('state', next_state)

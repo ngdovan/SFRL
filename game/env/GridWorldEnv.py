@@ -27,7 +27,7 @@ MAPHEIGHT = 16
 class GridWorldEnv(IEnv):
     def __init__(self, rootFol='', screen=None, matmap=None):
         self.RootFol = rootFol
-        tiled_map = load_pygame(rootFol + 'game/env/map/resources/gridworld/gridworld.tmx', invert_y=True)
+        tiled_map = load_pygame(rootFol + 'game/env/map/resources/gridworld/gridworld2.tmx', invert_y=True)
         assert isinstance(tiled_map, object)
 
         self.all_agent = pygame.sprite.Group()
